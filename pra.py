@@ -10,17 +10,13 @@ from googletrans import Translator
 import pandas as pd
 import psycopg2
 
-# Define your proxy IP address and port
+
 proxy_ip = "210.179.101.88"
 proxy_port = "3128"
-
-# Configure the proxy settings
 proxy = Proxy()
 proxy.proxy_type = ProxyType.MANUAL
 proxy.http_proxy = f"{proxy_ip}:{proxy_port}"
 proxy.ssl_proxy = f"{proxy_ip}:{proxy_port}"
-
-# Create a WebDriver with the proxy settings
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument("--proxy-server=http://{proxy_ip}:{proxy_port}")
 driver = webdriver.Chrome(options=chrome_options)
@@ -46,8 +42,6 @@ def translate_column_names(column_names):
 
 
 driver = webdriver.Chrome()
-
-# Navigate to the website
 driver.get("https://pay2igr.igrmaharashtra.gov.in/eDisplay/Propertydetails/index")
 
 #For Top year selection
