@@ -30,8 +30,8 @@ def translate_column_names(column_names):
         "दस्त प्रकार": "document_type",
         "दू. नि. कार्यालय": "revenue_office",
         "वर्ष": "year_year",
-        "लिहून देणार": "issuer",
-        "लिहून घेणार": "receiver",
+        "लिहून देणार": "Buyer_Name",
+        "लिहून घेणार": "Seller_Name",
         "इतर माहीती": "other_info",
         "सूची क्र. २": "list_number"
     }
