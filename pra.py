@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
+from selenium.webdriver.common.proxy import Proxy, ProxyType
 import time
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -9,6 +10,39 @@ from googletrans import Translator
 import pandas as pd
 import psycopg2
 
+# Define your proxy IP address and port
+proxy_ip = "210.179.101.88"
+proxy_port = "3128"
+
+# Configure the proxy settings
+proxy = Proxy()
+proxy.proxy_type = ProxyType.MANUAL
+proxy.http_proxy = f"{proxy_ip}:{proxy_port}"
+proxy.ssl_proxy = f"{proxy_ip}:{proxy_port}"
+
+# Create a WebDriver with the proxy settings
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument("--proxy-server=http://{proxy_ip}:{proxy_port}")
+driver = webdriver.Chrome(options=chrome_options)
+
+def translate_column_names(column_names):
+
+    
+    column_mapping = {
+        "अनु क्र.": "serial_number",
+        "दस्त क्र.": "document_number",
+        "दस्त प्रकार": "document_type",
+        "दू. नि. कार्यालय": "revenue_office",
+        "वर्ष": "year_year",
+        "लिहून देणार": "issuer",
+        "लिहून घेणार": "receiver",
+        "इतर माहीती": "other_info",
+        "सूची क्र. २": "list_number"
+    }
+
+    # Translate column names
+    translated_column_names = [column_mapping.get(col, col) for col in column_names]
+    return translated_column_names
 
 
 driver = webdriver.Chrome()
@@ -55,7 +89,7 @@ table = driver.find_element(By.XPATH, "//table[@id='tableparty']")
 
 table_headers = table.find_elements(By.TAG_NAME, "th")
 header_list = [header.text for header in table_headers]
-
+translated_header_list = translate_column_names(header_list)
 data_rows = []
 
 table_rows = table.find_elements(By.TAG_NAME, "tr")[1:]  
@@ -63,7 +97,7 @@ for row in table_rows:
     row_data = [cell.text for cell in row.find_elements(By.TAG_NAME, "td")]   # Extract data from each cell in the row
     data_rows.append(row_data)
 
-df = pd.DataFrame(data_rows, columns=header_list)
+df = pd.DataFrame(data_rows, columns=translated_header_list)
 
 driver.quit()
 
@@ -72,7 +106,7 @@ conn = psycopg2.connect(
     database="PropReturns",
     user="postgres",
     password="Dhyey@16",
-    port=5436
+    port=5435
 )
 
 cursor = conn.cursor()
@@ -95,6 +129,12 @@ for column_name, data_type in zip(df.columns, df.dtypes):
     else:
         create_table_query += f"{column_name} {postgres_data_type}, "
 
+# Define the primary key column
+primary_key_column = "document_number"
+
+# Add the primary key constraint to the primary key column
+create_table_query += f'PRIMARY KEY ("{primary_key_column}")'
+
 # Remove the trailing comma and space
 create_table_query = create_table_query.rstrip(", ") + ")"
 
@@ -103,9 +143,18 @@ try:
     cursor.execute(create_table_query)
     conn.commit()
     print("Table created successfully.")
+     # Insert data into the table
+    for index, row in df.iterrows():
+        insert_query = f"INSERT INTO {table_name} ({', '.join(df.columns)}) VALUES ({', '.join(['%s']*len(df.columns))})"
+        cursor.execute(insert_query, tuple(row))
+    
+    # Commit the data insertion
+    conn.commit()
+    print("Data inserted successfully.")
 except Exception as e:
     # Print the error message
     print(f"Error: {e}")
 finally:
     # Close the connection
     conn.close()
+#print(df)
